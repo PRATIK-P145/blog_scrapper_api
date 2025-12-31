@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
-from app.database import db
+from database import db
 
 
 BLOGS_URL = "https://beyondchats.com/blogs/"
@@ -12,209 +12,108 @@ HEADERS = {
 
 REQUEST_TIMEOUT = 15
 
-def fetch_page(url: str):
-    response = requests.get(
-        url,
-        headers=HEADERS,
-        timeout=REQUEST_TIMEOUT
-    )
-    response.raise_for_status()
-    return response.text
-
-
-
-def test_fetch_blogs_page():
-    response = requests.get(BLOGS_URL)
-    response.raise_for_status()  
-
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    print("Page title:", soup.title.string)
-
-def get_last_page_url():
-    response = requests.get(BLOGS_URL)
+def get_last_page_number():
+    response = requests.get(BLOGS_URL, headers=HEADERS, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
     page_links = soup.find_all("a", class_="page-numbers")
 
-    page_numbers = []
-    for link in page_links:
-        text = link.get_text().strip()
-        if text.isdigit():
-            page_numbers.append(int(text))
-
-    last_page_number = max(page_numbers)
-
-    last_page_url = f"{BLOGS_URL}page/{last_page_number}/"
-    print("Last page URL:", last_page_url)
-
-    return last_page_url
+    numbers = [int(link.text) for link in page_links if link.text.isdigit()]
+    return max(numbers)
 
 
-def fetch_last_page_articles():
-    last_page_url = get_last_page_url()
+def collect_5_oldest_article_urls():
+    last_page = get_last_page_number()
+    collected_urls = []
 
-    response = requests.get(last_page_url)
+    current_page = last_page
+
+    while len(collected_urls) < 5 and current_page > 0:
+        page_url = f"{BLOGS_URL}page/{current_page}/"
+        print(f"Scanning page {current_page}")
+
+        response = requests.get(page_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        response.raise_for_status()
+
+        soup = BeautifulSoup(response.text, "html.parser")
+        articles = soup.find_all("article", class_="entry-card")
+
+        # Reverse → oldest first
+        articles.reverse()
+
+        for article in articles:
+            title_tag = article.find("h2", class_="entry-title")
+            if not title_tag:
+                continue
+
+            link = title_tag.find("a")
+            url = link["href"]
+
+            if url not in collected_urls:
+                collected_urls.append(url)
+
+            if len(collected_urls) == 5:
+                break
+
+        current_page -= 1
+
+    return collected_urls
+
+def extract_article_data(article_url):
+    response = requests.get(article_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
 
     soup = BeautifulSoup(response.text, "html.parser")
 
-    articles = soup.find_all("article", class_="entry-card")
+    title = soup.find("h1").get_text(strip=True)
 
-    print("Total articles found on last page:", len(articles))
+    author_tag = soup.select_one(".ct-meta-element-author span")
+    author = author_tag.get_text(strip=True) if author_tag else None
 
-    for article in articles[:5]:
-        title_tag = article.find("h2", class_="entry-title")
-        date_tag = article.find("time", class_="ct-meta-element-date")
-
-        if not title_tag:
-            continue
-
-        link_tag = title_tag.find("a")
-
-        title = link_tag.get_text(strip=True)
-        url = link_tag["href"]
-        published_date = date_tag["datetime"] if date_tag else None
-
-        print("Title:", title)
-        print("URL:", url)
-        print("Published:", published_date)
-        print("------")
+    date_tag = soup.find("time")
+    published_date = date_tag.get("datetime") if date_tag else None
 
 
+    content_div = soup.select_one(".elementor-widget-theme-post-content")
+    paragraphs = content_div.find_all("p") if content_div else []
+    content = "\n\n".join(p.get_text(strip=True) for p in paragraphs)
 
-def extract_and_print_oldest_articles():
-    last_page_url = get_last_page_url()
-
-    response = requests.get(last_page_url)
-    response.raise_for_status()
-
-    soup = BeautifulSoup(response.text, "html.parser")
-    articles = soup.find_all("article", class_="entry-card")
-
-    for article in articles[:5]:
-       
-        title_tag = article.find("h2", class_="entry-title")
-        if not title_tag:
-            continue
-
-        link_tag = title_tag.find("a")
-        title = link_tag.get_text(strip=True)
-        url = link_tag["href"]
-
-    
-        author_tag = article.find("a", class_="ct-meta-element-author")
-        author = author_tag.get_text(strip=True) if author_tag else None
-
-        date_tag = article.find("time", class_="ct-meta-element-date")
-        published_date = date_tag["datetime"] if date_tag else None
-
- 
-        content = extract_article_content(url)
-
-        article_data = {
-            "title": title,
-            "url": url,
-            "author": author,
-            "content": content,
-            "published_date": published_date,
-            "source": "beyondchats",
-            "status": "original",
-            "created_at": datetime.utcnow()
-        }
-
-        print("\n--- ARTICLE DATA ---")
-        for key, value in article_data.items():
-            if key == "content":
-                print(f"{key}: {value[:300]}...")
-            else:
-                print(f"{key}: {value}")
+    return {
+        "title": title,
+        "url": article_url,
+        "author": author,
+        "content": content,
+        "published_date": published_date,
+        "source": "beyondchats",
+        "status": "original",
+        "created_at": datetime.utcnow()
+    }
 
 
-def extract_article_content(article_url: str):
-    response = requests.get(article_url)
-    response.raise_for_status()
+def store_article_if_not_exists(article_data):
+    if db.articles.find_one({"url": article_data["url"]}):
+        print("Skipping duplicate:", article_data["title"])
+        return False
 
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    content_div = soup.find(
-        "div",
-        class_="elementor-widget-theme-post-content"
-    )
-
-    if not content_div:
-        print("Content container not found")
-        return None
-
-    text_blocks = content_div.find_all(["p", "h2", "h3"])
-
-    content = []
-    for block in text_blocks:
-        text = block.get_text(strip=True)
-        if text:
-            content.append(text)
-
-    full_content = "\n\n".join(content)
-
-    print("Content preview:")
-    print(full_content[:1500])  
-    return full_content
+    db.articles.insert_one(article_data)
+    print("Inserted:", article_data["title"])
+    return True
 
 
 def extract_and_store_oldest_articles():
-    last_page_url = get_last_page_url()
+    urls = collect_5_oldest_article_urls()
+    inserted = 0
 
-    response = requests.get(last_page_url)
-    response.raise_for_status()
+    for url in urls:
+        try:
+            article_data = extract_article_data(url)
+            if store_article_if_not_exists(article_data):
+                inserted += 1
+        except Exception as e:
+            print("Failed for:", url)
+            print(e)
 
-    soup = BeautifulSoup(response.text, "html.parser")
-    articles = soup.find_all("article", class_="entry-card")
-
-    inserted_count = 0
-
-    for article in articles[:5]:
-        
-        title_tag = article.find("h2", class_="entry-title")
-        if not title_tag:
-            continue
-
-        link_tag = title_tag.find("a")
-        title = link_tag.get_text(strip=True)
-        url = link_tag["href"]
-
-        if db.articles.find_one({"url": url}):
-            print("Skipping duplicate:", title)
-            continue
-
-        author_tag = article.find("a", class_="ct-meta-element-author")
-        author = author_tag.get_text(strip=True) if author_tag else None
-
-        date_tag = article.find("time", class_="ct-meta-element-date")
-        published_date = date_tag["datetime"] if date_tag else None
-
-        content = extract_article_content(url)
-        if not content:
-            continue
-
-        article_doc = {
-            "title": title,
-            "url": url,
-            "author": author,
-            "content": content,
-            "published_date": published_date,
-            "source": "beyondchats",
-            "status": "original",
-            "created_at": datetime.utcnow()
-        }
-
-        db.articles.insert_one(article_doc)
-        inserted_count += 1
-
-        print("Inserted:", title)
-
-    print(f"Total articles inserted: {inserted_count}")
-    return inserted_count
-
-
+    print(f"Total articles inserted: {inserted}")
+    return inserted
 

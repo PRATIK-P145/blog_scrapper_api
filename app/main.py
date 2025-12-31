@@ -5,6 +5,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import HTTPException
 from app.scraper import extract_and_store_oldest_articles
+from app.scraper import extract_and_store_oldest_articles
+
 
 app = FastAPI()
 
@@ -42,14 +44,20 @@ def create_article(article: ArticleCreate):
         "id": str(result.inserted_id)
     }
 
+# @app.post("/scrape/oldest")
+# def scrape_oldest_articles():
+#     count = extract_and_store_oldest_articles()
+#     return {
+#         "message": "Scraping completed",
+#         "inserted_articles": count
+#     }
+
 @app.post("/scrape/oldest")
 def scrape_oldest_articles():
-    count = extract_and_store_oldest_articles()
+    extract_and_store_oldest_articles()
     return {
-        "message": "Scraping completed",
-        "inserted_articles": count
+        "message": "Scraping started for 5 oldest articles"
     }
-
 
 
 
