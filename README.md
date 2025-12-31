@@ -135,12 +135,21 @@ WebScrap/
 
 ---
 
-## High-Level Architecture / Data Flow Diagram
 
+## Architecture / Data Flow Diagram
 
+![Architecture Diagram](docs/arch_diag.png)
+### Architecture Overview
+
+This project follows a simple and modular backend architecture designed for clarity and maintainability.
+
+The FastAPI backend acts as the central layer, exposing REST APIs used by reviewers through Swagger UI. When the scraping endpoint is triggered, the backend invokes a dedicated scraping module built using Requests and BeautifulSoup, which fetches blog pages from the BeyondChats website and extracts article data.
+
+The processed articles are stored in a MongoDB NoSQL database, allowing flexible storage and easy updates. All CRUD operations (create, read, update, delete) are handled through API endpoints, enabling articles to be retrieved, modified, or removed without re-scraping.
+
+This architecture cleanly separates concerns between API handling, scraping logic, and data persistence, making the system easy to evaluate, extend, and maintain.
 
 ---
-
 ## API Endpoints Summary
 
 | Method | Endpoint                 | Description                                             |
