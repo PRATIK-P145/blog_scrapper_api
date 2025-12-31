@@ -5,7 +5,7 @@ BLOGS_URL = "https://beyondchats.com/blogs/"
 
 def test_fetch_blogs_page():
     response = requests.get(BLOGS_URL)
-    response.raise_for_status()  # fails fast if request is bad
+    response.raise_for_status()  
 
     soup = BeautifulSoup(response.text, "html.parser")
 
@@ -62,6 +62,57 @@ def fetch_last_page_articles():
         print("Published:", published_date)
         print("------")
 
+from datetime import datetime
+import requests
+from bs4 import BeautifulSoup
+
+def extract_and_print_oldest_articles():
+    last_page_url = get_last_page_url()
+
+    response = requests.get(last_page_url)
+    response.raise_for_status()
+
+    soup = BeautifulSoup(response.text, "html.parser")
+    articles = soup.find_all("article", class_="entry-card")
+
+    for article in articles[:5]:
+       
+        title_tag = article.find("h2", class_="entry-title")
+        if not title_tag:
+            continue
+
+        link_tag = title_tag.find("a")
+        title = link_tag.get_text(strip=True)
+        url = link_tag["href"]
+
+    
+        author_tag = article.find("a", class_="ct-meta-element-author")
+        author = author_tag.get_text(strip=True) if author_tag else None
+
+        date_tag = article.find("time", class_="ct-meta-element-date")
+        published_date = date_tag["datetime"] if date_tag else None
+
+ 
+        content = extract_article_content(url)
+
+        article_data = {
+            "title": title,
+            "url": url,
+            "author": author,
+            "content": content,
+            "published_date": published_date,
+            "source": "beyondchats",
+            "status": "original",
+            "created_at": datetime.utcnow()
+        }
+
+        print("\n--- ARTICLE DATA ---")
+        for key, value in article_data.items():
+            if key == "content":
+                print(f"{key}: {value[:300]}...")
+            else:
+                print(f"{key}: {value}")
+
 
 def extract_article_content(article_url: str):
     response = requests.get(article_url)
@@ -89,8 +140,7 @@ def extract_article_content(article_url: str):
     full_content = "\n\n".join(content)
 
     print("Content preview:")
-    print(full_content[:1500])  # preview only
-
+    print(full_content[:1500])  
     return full_content
 
 

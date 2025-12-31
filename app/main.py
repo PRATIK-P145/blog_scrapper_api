@@ -41,19 +41,25 @@ def create_article(article: ArticleCreate):
         "id": str(result.inserted_id)
     }
 
-from app.scraper import test_fetch_blogs_page
-from app.scraper import get_last_page_url
-from app.scraper import fetch_last_page_articles
-from app.scraper import extract_article_content
+# from app.scraper import test_fetch_blogs_page
+# from app.scraper import get_last_page_url
+# from app.scraper import fetch_last_page_articles
+# from app.scraper import extract_article_content
 
-extract_article_content(
-    "https://beyondchats.com/blogs/introduction-to-chatbots/"
-)
+# extract_article_content(
+#     "https://beyondchats.com/blogs/introduction-to-chatbots/"
+# )
 
 # get_last_page_url()
 
 # test_fetch_blogs_page()
 
 # fetch_last_page_articles()
+
+from app.scraper import extract_and_print_oldest_articles
+
+extract_and_print_oldest_articles()
+
+
 
 
