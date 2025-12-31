@@ -1,10 +1,13 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
-class Article(BaseModel):
+class ArticleCreate(BaseModel):
     title: str
     url: str
-    content: Optional[str] = None
-    published_date: Optional[str] = None
-    created_at: datetime = datetime.utcnow()
+    content: str
+    published_date: Optional[datetime] = None
+    source: str = "beyondchats"
+    status: str = "original"
+    references: List[str] = []
+

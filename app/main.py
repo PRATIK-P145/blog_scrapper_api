@@ -1,18 +1,17 @@
 from fastapi import FastAPI
-from app.database import articles_collection
+from app.database import db
+from app.models import ArticleCreate
 
 app = FastAPI()
 
-@app.get("/health")
-def health_check():
-    return {"status": "OK"}
 
-@app.post("/test-db")
-def test_db():
-    article = {
-        "title": "Test Article",
-        "url": "https://example.com",
-        "content": "Testing DB connection"
+
+@app.post("/articles")
+def create_article(article: ArticleCreate):
+    article_dict = article.dict()
+    result = db.articles.insert_one(article_dict)
+
+    return {
+        "message": "Article created successfully",
+        "id": str(result.inserted_id)
     }
-    articles_collection.insert_one(article)
-    return {"message": "Inserted successfully"}
