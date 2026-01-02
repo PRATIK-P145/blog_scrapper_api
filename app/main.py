@@ -4,7 +4,7 @@ from app.models import ArticleCreate
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import HTTPException
-from app.scraper import extract_and_store_oldest_articles4
+from app.scraper import extract_and_store_oldest_articles
 from fastapi.middleware.cors import CORSMiddleware
 
 
@@ -13,7 +13,7 @@ app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:8080",   # React dev server
+        "http://localhost:8080",   
         "http://127.0.0.1:8080",
     ],
     allow_credentials=True,
