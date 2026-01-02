@@ -60,7 +60,7 @@ def collect_5_oldest_article_urls():
 
     return collected_urls
 
-def extract_article_data(article_url):
+def extract_article_data(article_url,source_type="extracted"):
     response = requests.get(article_url, headers=HEADERS, timeout=REQUEST_TIMEOUT)
     response.raise_for_status()
 
@@ -81,7 +81,7 @@ def extract_article_data(article_url):
         "content": content,
         "published_date": published_date,
         "source": "beyondchats",
-        "status": "Extracted",
+        "status": "extracted" if source_type == "extracted" else "original",
         "created_at": datetime.utcnow()
     }
 

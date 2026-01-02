@@ -6,6 +6,10 @@ from bson.errors import InvalidId
 from fastapi import HTTPException
 from app.scraper import extract_and_store_oldest_articles
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
+class ScrapeRequest(BaseModel):
+    source_type: str = "extracted"
 
 
 app = FastAPI()
@@ -70,8 +74,8 @@ def create_article(article: ArticleCreate):
 
 
 @app.post("/scrape/oldest")
-def scrape_oldest_articles():
-    inserted = extract_and_store_oldest_articles()
+def scrape_oldest_articles(payload: ScrapeRequest):
+    inserted = extract_and_store_oldest_articles(source_type=payload.source_type)
     return {
         "message": "Scraping completed",
         "inserted_articles": inserted
