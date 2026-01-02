@@ -4,7 +4,7 @@ from app.models import ArticleCreate
 from bson import ObjectId
 from bson.errors import InvalidId
 from fastapi import HTTPException
-from app.scraper import extract_and_store_oldest_articles4
+from app.scraper import extract_and_store_oldest_articles
 from fastapi.middleware.cors import CORSMiddleware
 
 
