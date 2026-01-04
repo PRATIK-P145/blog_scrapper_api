@@ -22,12 +22,17 @@ export interface ArticleInput {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    const error = await response.text();
-    throw new Error(error || `HTTP error! status: ${response.status}`);
+  const text = await response.text();
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    console.log("API_BASE_URL =", import.meta.env.VITE_API_BASE_URL);
+    console.error("Non-JSON response:", text);
+    throw new Error("API did not return JSON");
   }
-  return response.json();
 }
+
 
 export const api = {
   // Fetch all articles
