@@ -7,7 +7,7 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 
 if not MONGO_URI:
-    raise RuntimeError("MONGO_URI environment variable not set")
+    raise RuntimeError("MONGO_URI environment variable not Set, fix it !")
 
 client = MongoClient(
     MONGO_URI,
